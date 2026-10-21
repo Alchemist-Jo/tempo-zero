@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tempo-Zero: Recursive Self-Play in Executable Worlds for Video Reasoning</title>
+<meta name="description" content="Tempo-Zero trains a video language model by self-play in executable environments, where executing a program renders a video together with the ground truth of every question.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="hero">
+  <p class="kicker">Video reasoning &middot; Self-play &middot; Executable environments</p>
+  <h1>Tempo-Zero</h1>
+  <p class="subtitle">Recursive Self-Play in Executable Worlds for Video Reasoning</p>
+  <svg class="hero-lines" viewBox="0 0 1200 150" preserveAspectRatio="none" aria-hidden="true">
+    <path class="axis" d="M40 110 H1160"/>
+    <path class="gt" d="M520 92 V128 M760 92 V128 M520 92 H760"/>
+    <path class="ev ev1" d="M500 70 V104 M745 70 V104 M500 70 H745"/>
+    <path class="ev ev2" d="M560 50 V84 M790 50 V84 M560 50 H790"/>
+    <path class="trace" d="M40 110 C200 110 260 60 360 80 S520 130 640 100 S860 40 980 90 S1100 110 1160 105"/>
+  </svg>
+  <p class="author">Jingmin Zhu</p>
+  <p class="affil">Monash University</p>
+  <nav class="links">
+    <a href="#demos">Program videos</a>
+    <a href="#method">Method</a>
+    <a href="#results">Results</a>
+    <a href="#bibtex">BibTeX</a>
+  </nav>
+  <p class="tldr">Executing a program renders a video together with the ground-truth option and interval of every question about it. One policy proposes and answers these questions, learns from execution-grounded rewards instead of model consensus, and evolves the programs it trains on. Trained only on simple rendered programs, without supervised fine-tuning or external video data, it improves over its base models on twelve real-world video benchmarks.</p>
+</header>
+
+<main>
+
+<section id="demos">
+  <h2><span>01</span>Program videos</h2>
+  <p class="lead">Every training video below comes from executing one program of the library. The trace that renders the frames also records the events, so the question, its ground-truth option and the interval of the deciding event come with the video. Play a clip: the <b class="g">gold</b> bands are execution intervals, and the ground-truth option lights up once the deciding event has passed.</p>
+  <div class="player">
+    <div class="screen"><video id="demo-video" muted playsinline autoplay loop></video></div>
+    <aside class="qa">
+      <div class="tags"><span id="demo-family"></span><span id="demo-task"></span><span id="demo-length"></span></div>
+      <p class="stem" id="demo-stem"></p>
+      <ol class="options" id="demo-options"></ol>
+      <p class="note">The ground truth comes from program execution.</p>
+    </aside>
+    <div class="timeline" id="demo-timeline"></div>
+  </div>
+  <div class="gallery" id="demo-gallery"></div>
+</section>
+
+<section id="method">
+  <h2><span>02</span>Method</h2>
+  <p class="lead">Tempo-Zero closes a loop of executable environments, execution-verified self-play and environment evolution. A single vision-language policy plays both roles, and every label it learns from comes from program execution.</p>
+
+  <div class="method-row">
+    <video src="assets/method/method-1.mp4" poster="assets/method/method-1.jpg" muted playsinline autoplay loop controls preload="metadata"></video>
+    <div class="method-text">
+      <h3>Executable environments</h3>
+      <p>A program with difficulty level, rule configuration and instance parameters executes into a trace. The trace compiles into the video, the verification criteria and a canonical question. Labels are recomputed on the sampled frames, and criteria whose answer survives a reversed or permuted trace are screened out as static.</p>
+      <h3>Execution-verified self-play</h3>
+      <p>As the Questioner, the policy writes new questions about verified criteria. A programmatic gate checks format, option validity, task scope and answer leakage. As the Solver, it answers with timestamped evidence lines, which are scored against the execution intervals. No judge model and no majority voting enter the loop.</p>
+      <p class="eq">R<sub>S</sub> = r<sub>ans</sub> + mean(r<sub>evid</sub>, r<sub>grd</sub>)<br>R<sub>Q</sub> = g(q) &middot; mean(r<sub>learn</sub>, r<sub>nov</sub>)</p>
+    </div>
+  </div>
+
+  <div class="method-row flip">
+    <video src="assets/method/method-2.mp4" poster="assets/method/method-2.jpg" muted playsinline autoplay loop controls preload="metadata"></video>
+    <div class="method-text">
+      <h3>Environment evolution</h3>
+      <p>After each round, decayed pass rates from the question bank reallocate instances across (family, task) pairs and raise or lower their difficulty levels. The policy then reads each family's statistics and selects a rule change from a menu. The executor re-executes the program to validate the change before deployment, and a fixed playback schedule lengthens the videos across rounds.</p>
+      <p class="eq">&omega;<sub>f,a</sub> = &kappa;/n<sub>f</sub> + (1 &minus; &kappa;) &middot; w<sub>f,a</sub> / &Sigma;<sub>a&prime;</sub> w<sub>f,a&prime;</sub></p>
+    </div>
+  </div>
+
+  <figure class="overview">
+    <img src="assets/overview.png" alt="Overview of Tempo-Zero" loading="lazy">
+    <figcaption>Programs execute and compile into a video, criteria and a canonical question. One policy proposes questions as the Questioner and answers them as the Solver; the bank stores measured questions for replay, and execution-grounded rewards drive GRPO updates.</figcaption>
+  </figure>
+</section>
+
+<section id="results">
+  <h2><span>03</span>Main results</h2>
+  <p class="lead">Training uses five rounds of LoRA self-play on rendered program videos only. The final checkpoint is evaluated zero-shot on twelve real-world benchmarks. Bold marks the best result per column within each backbone, underline marks the second best at 4B and 8B, and the small numbers give the change over the base model.</p>
+
+  <h3 class="table-title">Temporal grounding <small>(%, Avg. averages the mIoU of the first three benchmarks and GQA@0.3)</small></h3>
+  <div class="table-wrap">
+<!-- table:grounding -->
+<table class="results"><thead><tr><th rowspan="2">Backbone</th><th rowspan="2">Method</th><th colspan="4">ANet-RTL</th><th colspan="4">ActivityNet Captions</th><th colspan="4">Charades-STA</th><th colspan="2">NExT-GQA</th><th colspan="1"></th></tr>
+<tr><th>mIoU</th><th>R@0.3</th><th>R@0.5</th><th>R@0.7</th><th>mIoU</th><th>R@0.3</th><th>R@0.5</th><th>R@0.7</th><th>mIoU</th><th>R@0.3</th><th>R@0.5</th><th>R@0.7</th><th>GQA@0.3</th><th>GQA@0.5</th><th>Avg.</th></tr></thead>
+<tbody>
+<tr><th rowspan="5" class="bb">Qwen3-VL-4B</th><td class="m">Base model</td><td><span class="v">16.86</span></td><td><span class="v">22.70</span></td><td><span class="v">15.72</span></td><td><span class="v">8.73</span></td><td><span class="v">22.86</span></td><td><span class="v">30.94</span></td><td><span class="v">19.04</span></td><td><span class="v">11.29</span></td><td><span class="v">37.52</span></td><td><span class="v">58.90</span></td><td><span class="v">36.12</span></td><td><span class="v">16.23</span></td><td><span class="v">23.09</span></td><td><span class="v">15.40</span></td><td><span class="v">25.08</span></td></tr>
+<tr><td class="m">VisPlay</td><td><span class="v">16.58</span></td><td><span class="v">23.14</span></td><td><span class="v">13.97</span></td><td><span class="v">8.73</span></td><td><span class="v">22.89</span></td><td><span class="v">30.98</span></td><td><span class="v">19.12</span></td><td><span class="v">11.31</span></td><td><span class="v">37.59</span></td><td><span class="v">58.82</span></td><td><span class="v">36.59</span></td><td><span class="v">16.42</span></td><td><span class="v">23.14</span></td><td><span class="v">15.33</span></td><td><span class="v">25.05</span></td></tr>
+<tr><td class="m">V-Zero</td><td><span class="v">15.85</span></td><td><span class="v">20.96</span></td><td><span class="v">13.97</span></td><td><span class="v">8.30</span></td><td><span class="v">22.81</span></td><td><span class="v">30.91</span></td><td><span class="v">18.92</span></td><td><span class="v">11.31</span></td><td><span class="v">37.10</span></td><td><span class="v">58.33</span></td><td><span class="v">35.24</span></td><td><span class="v">15.62</span></td><td><span class="v">22.82</span></td><td><span class="v">15.22</span></td><td><span class="v">24.64</span></td></tr>
+<tr><td class="m">Video-Zero</td><td class="second"><span class="v">29.75</span></td><td class="second"><span class="v">44.98</span></td><td class="second"><span class="v">28.82</span></td><td class="best"><span class="v">13.54</span></td><td class="second"><span class="v">32.12</span></td><td class="second"><span class="v">44.76</span></td><td class="second"><span class="v">27.67</span></td><td class="second"><span class="v">16.24</span></td><td class="second"><span class="v">41.85</span></td><td class="second"><span class="v">65.11</span></td><td class="second"><span class="v">40.81</span></td><td class="best"><span class="v">20.03</span></td><td class="second"><span class="v">38.29</span></td><td class="second"><span class="v">23.00</span></td><td class="second"><span class="v">35.50</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">31.34</span><span class="d up">+14.48</span></td><td class="best"><span class="v">48.03</span><span class="d up">+25.33</span></td><td class="best"><span class="v">31.00</span><span class="d up">+15.28</span></td><td class="second"><span class="v">13.10</span><span class="d up">+4.37</span></td><td class="best"><span class="v">34.98</span><span class="d up">+12.12</span></td><td class="best"><span class="v">49.35</span><span class="d up">+18.41</span></td><td class="best"><span class="v">31.04</span><span class="d up">+12.00</span></td><td class="best"><span class="v">17.26</span><span class="d up">+5.97</span></td><td class="best"><span class="v">42.53</span><span class="d up">+5.01</span></td><td class="best"><span class="v">66.29</span><span class="d up">+7.39</span></td><td class="best"><span class="v">41.26</span><span class="d up">+5.14</span></td><td class="second"><span class="v">19.49</span><span class="d up">+3.26</span></td><td class="best"><span class="v">39.17</span><span class="d up">+16.08</span></td><td class="best"><span class="v">24.50</span><span class="d up">+9.10</span></td><td class="best"><span class="v">37.00</span><span class="d up">+11.92</span></td></tr>
+</tbody>
+<tbody>
+<tr><th rowspan="5" class="bb">Qwen3-VL-8B</th><td class="m">Base model</td><td><span class="v">21.95</span></td><td><span class="v">30.57</span></td><td><span class="v">21.83</span></td><td><span class="v">10.04</span></td><td><span class="v">26.56</span></td><td><span class="v">36.59</span></td><td><span class="v">22.63</span></td><td><span class="v">12.85</span></td><td><span class="v">36.70</span></td><td><span class="v">59.11</span></td><td><span class="v">33.87</span></td><td><span class="v">13.49</span></td><td><span class="v">35.93</span></td><td><span class="v">21.83</span></td><td><span class="v">30.28</span></td></tr>
+<tr><td class="m">VisPlay</td><td><span class="v">21.83</span></td><td><span class="v">32.31</span></td><td><span class="v">20.09</span></td><td><span class="v">10.04</span></td><td><span class="v">26.74</span></td><td><span class="v">36.94</span></td><td><span class="v">22.99</span></td><td><span class="v">12.93</span></td><td><span class="v">36.65</span></td><td><span class="v">59.03</span></td><td><span class="v">33.92</span></td><td><span class="v">13.47</span></td><td><span class="v">35.87</span></td><td><span class="v">22.19</span></td><td><span class="v">30.27</span></td></tr>
+<tr><td class="m">V-Zero</td><td><span class="v">22.77</span></td><td><span class="v">32.31</span></td><td><span class="v">20.52</span></td><td><span class="v">9.17</span></td><td><span class="v">26.69</span></td><td><span class="v">36.79</span></td><td><span class="v">23.05</span></td><td><span class="v">13.00</span></td><td><span class="v">36.43</span></td><td><span class="v">58.63</span></td><td><span class="v">33.66</span></td><td><span class="v">13.41</span></td><td><span class="v">35.73</span></td><td><span class="v">22.11</span></td><td><span class="v">30.40</span></td></tr>
+<tr><td class="m">Video-Zero</td><td class="second"><span class="v">26.19</span></td><td class="second"><span class="v">39.30</span></td><td class="second"><span class="v">24.45</span></td><td class="second"><span class="v">12.23</span></td><td class="second"><span class="v">29.87</span></td><td class="second"><span class="v">41.77</span></td><td class="second"><span class="v">26.23</span></td><td class="second"><span class="v">14.66</span></td><td class="second"><span class="v">37.34</span></td><td class="second"><span class="v">60.16</span></td><td class="second"><span class="v">35.54</span></td><td class="second"><span class="v">13.58</span></td><td class="second"><span class="v">39.60</span></td><td class="second"><span class="v">24.26</span></td><td class="second"><span class="v">33.25</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">31.22</span><span class="d up">+9.27</span></td><td class="best"><span class="v">46.72</span><span class="d up">+16.15</span></td><td class="best"><span class="v">28.38</span><span class="d up">+6.55</span></td><td class="best"><span class="v">13.54</span><span class="d up">+3.50</span></td><td class="best"><span class="v">34.16</span><span class="d up">+7.60</span></td><td class="best"><span class="v">49.20</span><span class="d up">+12.61</span></td><td class="best"><span class="v">30.86</span><span class="d up">+8.23</span></td><td class="best"><span class="v">16.26</span><span class="d up">+3.41</span></td><td class="best"><span class="v">46.10</span><span class="d up">+9.40</span></td><td class="best"><span class="v">72.26</span><span class="d up">+13.15</span></td><td class="best"><span class="v">49.81</span><span class="d up">+15.94</span></td><td class="best"><span class="v">23.06</span><span class="d up">+9.57</span></td><td class="best"><span class="v">40.39</span><span class="d up">+4.46</span></td><td class="best"><span class="v">25.14</span><span class="d up">+3.31</span></td><td class="best"><span class="v">37.97</span><span class="d up">+7.69</span></td></tr>
+</tbody>
+<tbody>
+<tr><th rowspan="2" class="bb">Qwen3-VL-30B-A3B</th><td class="m">Base model</td><td><span class="v">23.45</span></td><td><span class="v">32.75</span></td><td><span class="v">23.14</span></td><td><span class="v">13.10</span></td><td><span class="v">27.90</span></td><td><span class="v">37.65</span></td><td><span class="v">23.98</span></td><td><span class="v">14.39</span></td><td><span class="v">47.34</span></td><td><span class="v">68.44</span></td><td><span class="v">51.61</span></td><td class="best"><span class="v">30.13</span></td><td><span class="v">38.83</span></td><td><span class="v">23.63</span></td><td><span class="v">34.38</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">34.23</span><span class="d up">+10.78</span></td><td class="best"><span class="v">49.78</span><span class="d up">+17.03</span></td><td class="best"><span class="v">33.62</span><span class="d up">+10.48</span></td><td class="best"><span class="v">17.90</span><span class="d up">+4.80</span></td><td class="best"><span class="v">36.35</span><span class="d up">+8.45</span></td><td class="best"><span class="v">52.42</span><span class="d up">+14.77</span></td><td class="best"><span class="v">32.95</span><span class="d up">+8.97</span></td><td class="best"><span class="v">17.38</span><span class="d up">+2.99</span></td><td class="best"><span class="v">48.77</span><span class="d up">+1.43</span></td><td class="best"><span class="v">77.15</span><span class="d up">+8.71</span></td><td class="best"><span class="v">52.96</span><span class="d up">+1.35</span></td><td><span class="v">22.37</span><span class="d down">−7.76</span></td><td class="best"><span class="v">45.15</span><span class="d up">+6.32</span></td><td class="best"><span class="v">27.88</span><span class="d up">+4.25</span></td><td class="best"><span class="v">41.12</span><span class="d up">+6.74</span></td></tr>
+</tbody>
+<tbody>
+<tr><th rowspan="2" class="bb">Gemma 4 E4B</th><td class="m">Base model</td><td><span class="v">23.97</span></td><td><span class="v">34.93</span></td><td><span class="v">22.27</span></td><td><span class="v">10.04</span></td><td><span class="v">18.64</span></td><td><span class="v">24.93</span></td><td><span class="v">14.65</span></td><td><span class="v">7.05</span></td><td><span class="v">19.08</span></td><td><span class="v">27.39</span></td><td><span class="v">13.04</span></td><td><span class="v">6.05</span></td><td><span class="v">21.72</span></td><td><span class="v">10.99</span></td><td><span class="v">20.85</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">30.52</span><span class="d up">+6.55</span></td><td class="best"><span class="v">41.48</span><span class="d up">+6.55</span></td><td class="best"><span class="v">27.51</span><span class="d up">+5.24</span></td><td class="best"><span class="v">15.72</span><span class="d up">+5.68</span></td><td class="best"><span class="v">33.53</span><span class="d up">+14.89</span></td><td class="best"><span class="v">47.52</span><span class="d up">+22.59</span></td><td class="best"><span class="v">29.94</span><span class="d up">+15.29</span></td><td class="best"><span class="v">15.99</span><span class="d up">+8.94</span></td><td class="best"><span class="v">32.01</span><span class="d up">+12.93</span></td><td class="best"><span class="v">50.97</span><span class="d up">+23.58</span></td><td class="best"><span class="v">24.30</span><span class="d up">+11.26</span></td><td class="best"><span class="v">9.52</span><span class="d up">+3.47</span></td><td class="best"><span class="v">26.40</span><span class="d up">+4.68</span></td><td class="best"><span class="v">14.64</span><span class="d up">+3.65</span></td><td class="best"><span class="v">30.61</span><span class="d up">+9.76</span></td></tr>
+</tbody>
+</table>
+<!-- /table:grounding -->
+  </div>
+  <p class="takeaway">Tempo-Zero improves every grounding metric over the base model at 4B and 8B and gives the best result in 26 of their 28 metrics. Training never sees a real-world interval annotation, so these gains come from localization learned on rendered videos.</p>
+
+  <h3 class="table-title">Long-video understanding and video reasoning <small>(official accuracy, %)</small></h3>
+  <div class="table-wrap">
+<!-- table:qa -->
+<table class="results"><thead><tr><th rowspan="2">Backbone</th><th rowspan="2">Method</th><th colspan="4">Long-video understanding</th><th colspan="4">Video reasoning</th><th colspan="1"></th></tr>
+<tr><th>LongVideoBench</th><th>MLVU</th><th>Video-MME-Long</th><th>LSDBench</th><th>LongVideoReason</th><th>MMVU</th><th>VideoMathQA</th><th>VideoMMMU</th><th>Avg.</th></tr></thead>
+<tbody>
+<tr><th rowspan="5" class="bb">Qwen3-VL-4B</th><td class="m">Base model</td><td><span class="v">57.70</span></td><td><span class="v">62.60</span></td><td><span class="v">51.60</span></td><td><span class="v">54.68</span></td><td><span class="v">69.90</span></td><td><span class="v">64.32</span></td><td><span class="v">19.05</span></td><td><span class="v">57.56</span></td><td><span class="v">54.68</span></td></tr>
+<tr><td class="m">VisPlay</td><td><span class="v">59.20</span></td><td class="second"><span class="v">63.50</span></td><td><span class="v">53.20</span></td><td><span class="v">54.83</span></td><td><span class="v">69.60</span></td><td><span class="v">63.36</span></td><td><span class="v">18.33</span></td><td><span class="v">57.44</span></td><td><span class="v">54.93</span></td></tr>
+<tr><td class="m">V-Zero</td><td class="second"><span class="v">59.50</span></td><td class="second"><span class="v">63.50</span></td><td><span class="v">51.90</span></td><td><span class="v">54.68</span></td><td><span class="v">68.20</span></td><td><span class="v">64.48</span></td><td><span class="v">20.95</span></td><td><span class="v">58.33</span></td><td><span class="v">55.19</span></td></tr>
+<tr><td class="m">Video-Zero</td><td><span class="v">59.10</span></td><td><span class="v">63.40</span></td><td class="best"><span class="v">53.60</span></td><td class="best"><span class="v">56.52</span></td><td class="second"><span class="v">70.30</span></td><td class="second"><span class="v">64.96</span></td><td class="second"><span class="v">21.67</span></td><td class="second"><span class="v">61.56</span></td><td class="second"><span class="v">56.39</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">61.00</span><span class="d up">+3.30</span></td><td class="best"><span class="v">67.36</span><span class="d up">+4.76</span></td><td class="second"><span class="v">53.30</span><span class="d up">+1.70</span></td><td class="second"><span class="v">56.06</span><span class="d up">+1.38</span></td><td class="best"><span class="v">72.40</span><span class="d up">+2.50</span></td><td class="best"><span class="v">66.08</span><span class="d up">+1.76</span></td><td class="best"><span class="v">22.38</span><span class="d up">+3.33</span></td><td class="best"><span class="v">63.11</span><span class="d up">+5.55</span></td><td class="best"><span class="v">57.71</span><span class="d up">+3.03</span></td></tr>
+</tbody>
+<tbody>
+<tr><th rowspan="5" class="bb">Qwen3-VL-8B</th><td class="m">Base model</td><td><span class="v">59.80</span></td><td><span class="v">64.40</span></td><td><span class="v">55.70</span></td><td class="second"><span class="v">57.59</span></td><td><span class="v">68.60</span></td><td><span class="v">68.32</span></td><td><span class="v">23.81</span></td><td><span class="v">63.78</span></td><td><span class="v">57.75</span></td></tr>
+<tr><td class="m">VisPlay</td><td class="second"><span class="v">60.50</span></td><td class="second"><span class="v">64.90</span></td><td><span class="v">54.90</span></td><td><span class="v">57.44</span></td><td><span class="v">68.10</span></td><td><span class="v">67.04</span></td><td><span class="v">21.43</span></td><td><span class="v">62.67</span></td><td><span class="v">57.12</span></td></tr>
+<tr><td class="m">V-Zero</td><td><span class="v">60.10</span></td><td><span class="v">64.20</span></td><td><span class="v">56.00</span></td><td><span class="v">56.90</span></td><td><span class="v">69.20</span></td><td class="best"><span class="v">68.80</span></td><td><span class="v">22.14</span></td><td><span class="v">63.22</span></td><td><span class="v">57.57</span></td></tr>
+<tr><td class="m">Video-Zero</td><td><span class="v">60.40</span></td><td><span class="v">64.60</span></td><td class="second"><span class="v">56.60</span></td><td><span class="v">56.75</span></td><td class="second"><span class="v">70.70</span></td><td><span class="v">68.00</span></td><td class="second"><span class="v">25.48</span></td><td class="second"><span class="v">64.22</span></td><td class="second"><span class="v">58.34</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">61.00</span><span class="d up">+1.20</span></td><td class="best"><span class="v">68.51</span><span class="d up">+4.11</span></td><td class="best"><span class="v">56.90</span><span class="d up">+1.20</span></td><td class="best"><span class="v">58.59</span><span class="d up">+1.00</span></td><td class="best"><span class="v">73.00</span><span class="d up">+4.40</span></td><td class="second"><span class="v">68.48</span><span class="d up">+0.16</span></td><td class="best"><span class="v">27.38</span><span class="d up">+3.57</span></td><td class="best"><span class="v">64.44</span><span class="d up">+0.66</span></td><td class="best"><span class="v">59.79</span><span class="d up">+2.04</span></td></tr>
+</tbody>
+<tbody>
+<tr><th rowspan="2" class="bb">Qwen3-VL-30B-A3B</th><td class="m">Base model</td><td><span class="v">65.37</span></td><td><span class="v">70.26</span></td><td><span class="v">58.33</span></td><td><span class="v">62.50</span></td><td><span class="v">71.40</span></td><td><span class="v">72.16</span></td><td><span class="v">26.90</span></td><td><span class="v">65.11</span></td><td><span class="v">61.50</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">66.70</span><span class="d up">+1.33</span></td><td class="best"><span class="v">71.34</span><span class="d up">+1.08</span></td><td class="best"><span class="v">60.56</span><span class="d up">+2.23</span></td><td class="best"><span class="v">63.96</span><span class="d up">+1.46</span></td><td class="best"><span class="v">75.60</span><span class="d up">+4.20</span></td><td class="best"><span class="v">73.60</span><span class="d up">+1.44</span></td><td class="best"><span class="v">31.90</span><span class="d up">+5.00</span></td><td class="best"><span class="v">67.44</span><span class="d up">+2.33</span></td><td class="best"><span class="v">63.89</span><span class="d up">+2.39</span></td></tr>
+</tbody>
+<tbody>
+<tr><th rowspan="2" class="bb">Gemma 4 E4B</th><td class="m">Base model</td><td><span class="v">50.71</span></td><td><span class="v">54.51</span></td><td><span class="v">46.44</span></td><td><span class="v">47.09</span></td><td><span class="v">70.60</span></td><td><span class="v">65.28</span></td><td class="best"><span class="v">30.00</span></td><td><span class="v">65.89</span></td><td><span class="v">53.81</span></td></tr>
+<tr class="ours"><td class="m">Tempo-Zero</td><td class="best"><span class="v">53.40</span><span class="d up">+2.69</span></td><td class="best"><span class="v">54.62</span><span class="d up">+0.11</span></td><td class="best"><span class="v">48.00</span><span class="d up">+1.56</span></td><td class="best"><span class="v">55.14</span><span class="d up">+8.05</span></td><td class="best"><span class="v">71.10</span><span class="d up">+0.50</span></td><td class="best"><span class="v">67.04</span><span class="d up">+1.76</span></td><td><span class="v">29.29</span><span class="d down">−0.71</span></td><td class="best"><span class="v">66.11</span><span class="d up">+0.22</span></td><td class="best"><span class="v">55.59</span><span class="d up">+1.78</span></td></tr>
+</tbody>
+</table>
+<!-- /table:qa -->
+  </div>
+  <p class="takeaway">The gains extend beyond grounding: Tempo-Zero improves all eight benchmarks on every Qwen3-VL backbone and gives the best result in 13 of the 16 metrics at 4B and 8B.</p>
+</section>
+
+<section id="bibtex">
+  <h2><span>04</span>BibTeX</h2>
+<pre><code>@misc{zhu2026tempozero,
+  title  = {Tempo-Zero: Recursive Self-Play in Executable Worlds for Video Reasoning},
+  author = {Zhu, Jingmin},
+  year   = {2026}
+}</code></pre>
+</section>
+
+</main>
+
+<footer>Tempo-Zero &middot; Jingmin Zhu &middot; Monash University</footer>
+
+<script src="assets/demos/demos.js"></script>
+<script src="assets/main.js"></script>
+</body>
+</html>
